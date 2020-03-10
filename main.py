@@ -4,7 +4,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
 from classes.Race import Race
-import time
+import time, sys
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument('--headless')
@@ -18,13 +18,16 @@ def getRaces(url):
     races = []
     driver.execute_script("window.scrollTo(0, window.scrollY + 4800)")
     pageCount = len(driver.find_elements_by_xpath("//div[@class='pageButtons']/div[contains(@class, 'pageNumber')]"))
+    raceCount = driver.find_element_by_xpath("//div[@class='race-count']/p[1]").text
+
+    print(raceCount)
 
     # Do the first page
     driver.execute_script("window.scrollTo(0, window.scrollY + 0)")
 
     currPage = 1
 
-    while True: 
+    for i in progressbar(range(pageCount), "Getting Races: "):
         html = driver.page_source
         soup = BeautifulSoup(html, 'lxml')
 
@@ -47,8 +50,6 @@ def getRaces(url):
             actions.click(nxt).perform()
             currPage += 1
             time.sleep(2)
-        else:
-            break
 
     driver.quit()
 
@@ -109,6 +110,20 @@ def getRaceResults(race):
 
     driver.quit()
     return raceResults
+
+def progressbar(it, prefix="", size=60, file=sys.stdout):
+    count = len(it)
+    def show(j):
+        x = int(size*j/count)
+        perc = int(j/count*100)
+        file.write("%s[%s%s] (%i%s)\r" % (prefix, "#"*x, "."*(size-x), perc,"%"))
+        file.flush()        
+    show(0)
+    for i, item in enumerate(it):
+        yield item
+        show(i+1)
+    file.write("\n")
+    file.flush()
 
 def main():
     url = 'https://www.ironman.com/races'
