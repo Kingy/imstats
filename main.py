@@ -6,9 +6,12 @@ from bs4 import BeautifulSoup
 from classes.Race import Race
 import time, sys
 
+im_url = 'https://www.ironman.com/'
+
 chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument('--headless')
+#chrome_options.add_argument('--headless')
 chrome_options.add_argument('--blink-settings=imagesEnabled=false')
+chrome_options.add_argument('--log-level=3')
 
 def getRaces(url):
     driver = webdriver.Chrome('driver/chromedriver.exe', options=chrome_options)
@@ -55,21 +58,22 @@ def getRaces(url):
 
     return races
 
-def getRaceResults(race):
+def getRaceResults(Race):
+
+    result_url = im_url + Race.url_segment + '-results'
+
     driver = webdriver.Chrome('driver/chromedriver.exe', options=chrome_options)    
-    driver.get('https://www.ironman.com/im703-bahrain-results')
+    driver.get(result_url)
     html = driver.page_source
     soup = BeautifulSoup(html, 'lxml')
     races = []
     raceResults = []
-    # Do the first page
     for link in soup.find_all('a', {'class' : 'tab-remote'}):
         races.append(link['href'])
 
-    for raceYear in races:
-        driver.get('https://www.ironman.com' + raceYear)
+    for raceYearURL in races:
+        driver.get(im_url + raceYearURL)
         time.sleep(3)
-        #driver.get('https://www.ironman.com' + '/layout_container/show_layout_tab?layout_container_id=64131430&page_node_id=5321701&tab_element_id=212986')
         html = driver.page_source
         soup = BeautifulSoup(html, 'lxml')
         labURL = soup.iframe['src']
@@ -80,24 +84,17 @@ def getRaceResults(race):
         html = driver.page_source
         soup = BeautifulSoup(html, 'lxml')    
 
+        athleteCount = int(driver.find_element_by_xpath("//p[@class='MuiTypography-root MuiTablePagination-caption MuiTypography-body2 MuiTypography-colorInherit'][2]").text.split()[2])
+
+        print("Athletes Found {0}".format(str(athleteCount)))
+
         # Let's just keep it at one page for now
         #pageCount = int(driver.find_element_by_xpath("//div[@class='jss369']/button[contains(@class, 'page-number')][last()]").text)
-        pageCount = 1
+        pageCount = 2
 
-        # First page of racers
-        for tr in soup.find_all('tr', {'class' : 'MuiTableRow-root'}):
-            td = tr.find('td', {'class' : 'column-Contact.FullName'})
-            if td:
-                raceResults.append(td.span.text)
+        currPage = 1
 
-        x = 0
-
-        while x < pageCount:
-            nxt = driver.find_element_by_xpath("//div[@class='jss369']/button[contains(@class, 'next-page')]")
-            actions = ActionChains(driver)
-            actions.click(nxt).perform()
-            time.sleep(2)
-
+        for i in progressbar(range(pageCount), "Getting Athlete Results: "):
             html = driver.page_source
             soup = BeautifulSoup(html, 'lxml')
 
@@ -106,7 +103,12 @@ def getRaceResults(race):
                 if td:
                     raceResults.append(td.span.text)
 
-            x += 1
+            if currPage != pageCount:
+                nxt = driver.find_element_by_xpath("//button[contains(@class, 'next-page')]")
+                actions = ActionChains(driver)
+                actions.click(nxt).perform()
+                currPage += 1
+                time.sleep(2)        
 
     driver.quit()
     return raceResults
@@ -126,13 +128,12 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
     file.flush()
 
 def main():
-    url = 'https://www.ironman.com/races'
+    url = im_url + 'races'
     races = getRaces(url)
     for r in races:
-        print(r.raceInfo())  
-
-    #raceResults = getRaceResults('im703-bahrain')
-    #print(raceResults)
+        print(r.raceInfo())
+        raceResults = getRaceResults(r)
+        print(raceResults)
 
 if __name__== "__main__":
     main()
