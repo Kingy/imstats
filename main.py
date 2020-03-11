@@ -4,6 +4,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
 from classes.Race import Race
+from classes.Athlete import Athlete
 import time, sys
 
 im_url = 'https://www.ironman.com/'
@@ -68,6 +69,7 @@ def getRaceResults(Race):
     soup = BeautifulSoup(html, 'lxml')
     races = []
     raceResults = []
+    athletes = []
     for link in soup.find_all('a', {'class' : 'tab-remote'}):
         races.append(link['href'])
 
@@ -99,9 +101,18 @@ def getRaceResults(Race):
             soup = BeautifulSoup(html, 'lxml')
 
             for tr in soup.find_all('tr', {'class' : 'MuiTableRow-root'}):
-                td = tr.find('td', {'class' : 'column-Contact.FullName'})
-                if td:
-                    raceResults.append(td.span.text)
+                name = ""
+                country = ""
+
+                nameTd = tr.find('td', {'class' : 'column-Contact.FullName'})
+                if nameTd:
+                    name = nameTd.span.text
+                countryTd = tr.find('td', {'class' : 'column-CountryISO2'})
+                if countryTd:
+                    country = countryTd.span.text
+
+                athlete = Athlete(name, country)
+                athletes.append(athlete)
 
             if currPage != pageCount:
                 nxt = driver.find_element_by_xpath("//button[contains(@class, 'next-page')]")
@@ -111,7 +122,7 @@ def getRaceResults(Race):
                 time.sleep(2)        
 
     driver.quit()
-    return raceResults
+    return athletes
 
 def progressbar(it, prefix="", size=60, file=sys.stdout):
     count = len(it)
