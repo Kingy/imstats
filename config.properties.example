@@ -1,0 +1,10 @@
+[Main]
+ironman.base_url = 'https://www.ironman.com/'
+
+[DatabaseSection]
+database.host=localhost
+database.port=3306
+database.dbname=dbname
+database.user=user
+database.pass=password
+
