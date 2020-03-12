@@ -1,5 +1,6 @@
 [Main]
-ironman.base_url = 'https://www.ironman.com/'
+ironman.base_url = https://www.ironman.com/
+chromedriver.location = driver/chromedriver.exe
 
 [DatabaseSection]
 database.host=localhost
