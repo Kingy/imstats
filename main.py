@@ -5,9 +5,21 @@ from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
 from classes.Race import Race
 from classes.Athlete import Athlete
+from mysql.connector import connect
 import time, sys
+import configparser
 
-im_url = 'https://www.ironman.com/'
+config = configparser.ConfigParser()
+config.read('config.properties')
+
+connection = connect(host=config['Database']['database.host'],
+                    database=config['Database']['database.dbname'],
+                    user=config['Database']['database.user'],
+                    password=config['Database']['database.pass'],
+                    auth_plugin='mysql_native_password')
+
+im_url = config['Main']['ironman.base_url']
+chrome_driver = config['Main']['chromedriver.location']
 
 chrome_options = webdriver.ChromeOptions()
 #chrome_options.add_argument('--headless')
@@ -15,7 +27,7 @@ chrome_options.add_argument('--blink-settings=imagesEnabled=false')
 chrome_options.add_argument('--log-level=3')
 
 def getRaces(url):
-    driver = webdriver.Chrome('driver/chromedriver.exe', options=chrome_options)
+    driver = webdriver.Chrome(chrome_driver, options=chrome_options)
     driver.get(url)
     html = driver.page_source
     soup = BeautifulSoup(html, 'lxml')
@@ -23,8 +35,6 @@ def getRaces(url):
     driver.execute_script("window.scrollTo(0, window.scrollY + 4800)")
     pageCount = len(driver.find_elements_by_xpath("//div[@class='pageButtons']/div[contains(@class, 'pageNumber')]"))
     raceCount = driver.find_element_by_xpath("//div[@class='race-count']/p[1]").text
-
-    print(raceCount)
 
     # Do the first page
     driver.execute_script("window.scrollTo(0, window.scrollY + 0)")
@@ -63,7 +73,7 @@ def getRaceResults(Race):
 
     result_url = im_url + Race.url_segment + '-results'
 
-    driver = webdriver.Chrome('driver/chromedriver.exe', options=chrome_options)    
+    driver = webdriver.Chrome(chrome_driver, options=chrome_options)    
     driver.get(result_url)
     html = driver.page_source
     soup = BeautifulSoup(html, 'lxml')
