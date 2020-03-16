@@ -5,18 +5,12 @@ from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
 from classes.Course import Course
 from classes.Athlete import Athlete
-from mysql.connector import connect
+from classes.Database import Database
 import time, sys
 import configparser
 
 config = configparser.ConfigParser()
 config.read('config.properties')
-
-connection = connect(host=config['Database']['database.host'],
-                    database=config['Database']['database.dbname'],
-                    user=config['Database']['database.user'],
-                    password=config['Database']['database.pass'],
-                    auth_plugin='mysql_native_password')
 
 im_url = config['Main']['ironman.base_url']
 chrome_driver = config['Main']['chromedriver.location']
