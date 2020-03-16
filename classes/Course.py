@@ -12,5 +12,11 @@ class Course:
         parsed = urlparse(self.url)
         return parsed.path
 
+    def doesExist(self):
+        return false
+
+    def updateNextRaceDate(self):
+        return
+
     def courseInfo(self):
         return self.name + ' will be held in ' + self.location + ' on ' + self.date + ' (' + self.url_segment + ')'
