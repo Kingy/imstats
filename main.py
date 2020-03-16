@@ -153,7 +153,7 @@ def main():
     courses = getCourses(url)
     for c in courses:
         print(c.courseInfo())
-        raceResults = getRaceResults(r)
+        raceResults = getRaceResults(c)
         print(raceResults)
 
 if __name__== "__main__":
