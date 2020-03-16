@@ -3,7 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
-from classes.Race import Race
+from classes.Course import Course
 from classes.Athlete import Athlete
 from mysql.connector import connect
 import time, sys
@@ -26,35 +26,35 @@ chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument('--blink-settings=imagesEnabled=false')
 chrome_options.add_argument('--log-level=3')
 
-def getRaces(url):
+def getCourses(url):
     driver = webdriver.Chrome(chrome_driver, options=chrome_options)
     driver.get(url)
     html = driver.page_source
     soup = BeautifulSoup(html, 'lxml')
-    races = []
+    courses = []
     driver.execute_script("window.scrollTo(0, window.scrollY + 4800)")
     pageCount = len(driver.find_elements_by_xpath("//div[@class='pageButtons']/div[contains(@class, 'pageNumber')]"))
-    raceCount = driver.find_element_by_xpath("//div[@class='race-count']/p[1]").text
+    courseCount = driver.find_element_by_xpath("//div[@class='race-count']/p[1]").text
 
     # Do the first page
     driver.execute_script("window.scrollTo(0, window.scrollY + 0)")
 
     currPage = 1
 
-    for i in progressbar(range(pageCount), "Getting Races: "):
+    for i in progressbar(range(pageCount), "Getting Courses: "):
         html = driver.page_source
         soup = BeautifulSoup(html, 'lxml')
 
-        for raceDiv in soup.find_all('div', {'class' : 'race-card'}):
-            name = raceDiv.find('div', {'class' : 'details-left'}).h3.text
-            location = raceDiv.find('p', {'class' : 'race-location'}).text
-            month = raceDiv.find('p', {'class' : 'race-month'}).text
-            day = raceDiv.find('p', {'class' : 'race-day'}).text
-            year = raceDiv.find('p', {'class' : 'race-year'}).text
+        for courseDiv in soup.find_all('div', {'class' : 'race-card'}):
+            name = courseDiv.find('div', {'class' : 'details-left'}).h3.text
+            location = courseDiv.find('p', {'class' : 'race-location'}).text
+            month = courseDiv.find('p', {'class' : 'race-month'}).text
+            day = courseDiv.find('p', {'class' : 'race-day'}).text
+            year = courseDiv.find('p', {'class' : 'race-year'}).text
             date = month + ' ' + day + ' ' + year
-            url = raceDiv.find('div', {'class' : 'race-details-right'}).a['href']
-            race = Race(name, location, date, url)
-            races.append(race)
+            url = courseDiv.find('div', {'class' : 'race-details-right'}).a['href']
+            course = Course(name, location, date, url)
+            courses.append(course)
 
         if currPage != pageCount:
             driver.execute_script("window.scrollTo(0, window.scrollY + 4600)")
@@ -67,7 +67,7 @@ def getRaces(url):
 
     driver.quit()
 
-    return races
+    return courses
 
 def getRaceResults(Race):
 
@@ -150,9 +150,9 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
 
 def main():
     url = im_url + 'races'
-    races = getRaces(url)
-    for r in races:
-        print(r.raceInfo())
+    courses = getCourses(url)
+    for c in courses:
+        print(c.courseInfo())
         raceResults = getRaceResults(r)
         print(raceResults)
 

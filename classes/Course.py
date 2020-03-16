@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 
-class Race:
+class Course:
     def __init__(self, name, location, date, url):
         self.name = name
         self.location = location
@@ -12,5 +12,5 @@ class Race:
         parsed = urlparse(self.url)
         return parsed.path
 
-    def raceInfo(self):
+    def courseInfo(self):
         return self.name + ' will be held in ' + self.location + ' on ' + self.date + ' (' + self.url_segment + ')'
