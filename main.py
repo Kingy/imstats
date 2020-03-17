@@ -26,7 +26,7 @@ def getCourses(url):
     html = driver.page_source
     soup = BeautifulSoup(html, 'lxml')
     courses = []
-    driver.execute_script("window.scrollTo(0, window.scrollY + 4800)")
+    driver.execute_script("window.scrollTo(0, window.scrollY + 4400)")
     pageCount = len(driver.find_elements_by_xpath("//div[@class='pageButtons']/div[contains(@class, 'pageNumber')]"))
     courseCount = driver.find_element_by_xpath("//div[@class='race-count']/p[1]").text
 
@@ -48,10 +48,16 @@ def getCourses(url):
             date = month + ' ' + day + ' ' + year
             url = courseDiv.find('div', {'class' : 'race-details-right'}).a['href']
             course = Course(name, location, date, url)
+
+            with Database() as db:
+                checkCourseExists = db.query("SELECT course_id from course where name = %s", (name,))
+                if not checkCourseExists:
+                    db.execute("INSERT INTO course (name) VALUES (%s)", (name,))
+
             courses.append(course)
 
         if currPage != pageCount:
-            driver.execute_script("window.scrollTo(0, window.scrollY + 4600)")
+            driver.execute_script("window.scrollTo(0, window.scrollY + 4400)")
             time.sleep(2)
             nxt = driver.find_element_by_xpath("//div[@class='paginationButtons']/button[@class='nextPageButton']")
             actions = ActionChains(driver)
@@ -147,8 +153,8 @@ def main():
     courses = getCourses(url)
     for c in courses:
         print(c.courseInfo())
-        raceResults = getRaceResults(c)
-        print(raceResults)
+        #raceResults = getRaceResults(c)
+        #print(raceResults)
 
 if __name__== "__main__":
     main()
