@@ -4,7 +4,7 @@ class Course:
     def __init__(self, name, location, date, url):
         self.name = name
         self.location = location
-        self.date = date
+        self.nextRacedate = date
         self.url = url
         self.url_segment = self.createUrlSegment()
 
@@ -12,11 +12,5 @@ class Course:
         parsed = urlparse(self.url)
         return parsed.path
 
-    def doesExist(self):
-        return false
-
-    def updateNextRaceDate(self):
-        return
-
     def courseInfo(self):
-        return self.name + ' will be held in ' + self.location + ' on ' + self.date + ' (' + self.url_segment + ')'
+        return self.name + ' will be held in ' + self.location + ' on ' + self.nextRacedate + ' (' + self.url_segment + ')'
