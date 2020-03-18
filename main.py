@@ -47,14 +47,18 @@ def getCourses(url):
             year = courseDiv.find('p', {'class' : 'race-year'}).text
             date = month + ' ' + day + ' ' + year
             url = courseDiv.find('div', {'class' : 'race-details-right'}).a['href']
-            course = Course(name, location, date, url)
+            courseID = null
 
             with Database() as db:
                 checkCourseExists = db.query("SELECT course_id from course where name = %s", (name,))
                 if not checkCourseExists:
                     db.execute("INSERT INTO course (name) VALUES (%s)", (name,))
+                    courseID = cursor.lastrowid
 
+            course = Course(courseID, name, location, url)
             courses.append(course)
+
+            # Make and insert the next race for this course here
 
         if currPage != pageCount:
             driver.execute_script("window.scrollTo(0, window.scrollY + 4400)")
@@ -69,9 +73,9 @@ def getCourses(url):
 
     return courses
 
-def getRaceResults(Race):
+def getRaceResults(Course):
 
-    result_url = im_url + Race.url_segment + '-results'
+    result_url = im_url + Course.url_segment + '-results'
 
     driver = webdriver.Chrome(chrome_driver, options=chrome_options)    
     driver.get(result_url)
@@ -82,7 +86,7 @@ def getRaceResults(Race):
     athletes = []
     for link in soup.find_all('a', {'class' : 'tab-remote'}):
         races.append(link['href'])
-
+        
     for raceYearURL in races:
         driver.get(im_url + raceYearURL)
         time.sleep(3)
