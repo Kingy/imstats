@@ -85,10 +85,23 @@ def getRaceResults(Course):
     raceResults = []
     athletes = []
     for link in soup.find_all('a', {'class' : 'tab-remote'}):
-        races.append(link['href'])
-        
-    for raceYearURL in races:
-        driver.get(im_url + raceYearURL)
+        raceURL = link['href']
+        raceDate = link.text
+        raceID = null
+        raceName = "N/A"
+        raceCourse = Course.id
+
+        with Database() as db:
+            checkCourseRaceExists = db.query("SELECT race_id from race where date = %s", (raceDate,))
+            if not checkCourseRaceExists:
+                db.execute("INSERT INTO race (course_id, name, date) VALUES (%s, %s, %s)", (raceCourse,'N/A',raceDate,))
+                raceID = cursor.lastrowid
+
+        race = Race(raceID, raceCourse, raceName, raceDate, raceURL)
+        races.append(race)
+
+    for race in races:
+        driver.get(im_url + race.url)
         time.sleep(3)
         html = driver.page_source
         soup = BeautifulSoup(html, 'lxml')
