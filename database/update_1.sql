@@ -1,0 +1,1 @@
+ALTER TABLE `race` CHANGE `race_date` `race_date` VARCHAR(15) NOT NULL;

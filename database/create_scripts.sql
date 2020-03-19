@@ -3,14 +3,14 @@ CREATE TABLE `country` (
   `cty_name` varchar(100) NOT NULL,
   `crt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`cty_code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `course` (
   `course_id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `crt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`course_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=184 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=184 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `imstats_codes` (
   `code_scm_val` varchar(50) NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE `imstats_codes` (
   `code_desc` varchar(100) NOT NULL,
   `crt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`code_scm_val`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `race` (
   `race_id` int NOT NULL AUTO_INCREMENT,
@@ -30,7 +30,7 @@ CREATE TABLE `race` (
   PRIMARY KEY (`race_id`),
   KEY `FK_race_course` (`course_id`),
   CONSTRAINT `FK_race_course` FOREIGN KEY (`course_id`) REFERENCES `course` (`course_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `race_results` (
   `result_id` int NOT NULL AUTO_INCREMENT,
@@ -49,7 +49,7 @@ CREATE TABLE `race_results` (
   KEY `FK_result_cty` (`cty_code`),
   CONSTRAINT `FK_result_cty` FOREIGN KEY (`cty_code`) REFERENCES `country` (`cty_code`),
   CONSTRAINT `FK_result_race` FOREIGN KEY (`race_id`) REFERENCES `race` (`race_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `result_det` (
   `result_det_id` int NOT NULL AUTO_INCREMENT,
@@ -65,4 +65,4 @@ CREATE TABLE `result_det` (
   PRIMARY KEY (`result_det_id`),
   KEY `FK_result_det_result` (`result_id`),
   CONSTRAINT `FK_result_det_result` FOREIGN KEY (`result_id`) REFERENCES `race_results` (`result_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
