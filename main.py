@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 from classes.Course import Course
 from classes.Athlete import Athlete
 from classes.Database import Database
+from classes.Race import Race
 import time, sys
 import configparser
 
@@ -47,13 +48,15 @@ def getCourses(url):
             year = courseDiv.find('p', {'class' : 'race-year'}).text
             date = month + ' ' + day + ' ' + year
             url = courseDiv.find('div', {'class' : 'race-details-right'}).a['href']
-            courseID = null
+            courseID = None
 
             with Database() as db:
                 checkCourseExists = db.query("SELECT course_id from course where name = %s", (name,))
                 if not checkCourseExists:
                     db.execute("INSERT INTO course (name) VALUES (%s)", (name,))
-                    courseID = cursor.lastrowid
+                    courseID = db.cursor.lastrowid
+                else:
+                    courseID = checkCourseExists[0][0]
 
             course = Course(courseID, name, location, url)
             courses.append(course)
@@ -87,66 +90,66 @@ def getRaceResults(Course):
     for link in soup.find_all('a', {'class' : 'tab-remote'}):
         raceURL = link['href']
         raceDate = link.text
-        raceID = null
+        raceID = None
         raceName = "N/A"
         raceCourse = Course.id
 
         with Database() as db:
-            checkCourseRaceExists = db.query("SELECT race_id from race where date = %s", (raceDate,))
+            checkCourseRaceExists = db.query("SELECT race_id from race where race_date = %s", (raceDate,))
             if not checkCourseRaceExists:
-                db.execute("INSERT INTO race (course_id, name, date) VALUES (%s, %s, %s)", (raceCourse,'N/A',raceDate,))
-                raceID = cursor.lastrowid
+                db.execute("INSERT INTO race (course_id, name, race_date) VALUES (%s, %s, %s)", (raceCourse,'N/A',raceDate,))
+                raceID = db.cursor.lastrowid
 
         race = Race(raceID, raceCourse, raceName, raceDate, raceURL)
         races.append(race)
 
-    for race in races:
-        driver.get(im_url + race.url)
-        time.sleep(3)
-        html = driver.page_source
-        soup = BeautifulSoup(html, 'lxml')
-        labURL = soup.iframe['src']
+    # for race in races:
+    #     driver.get(im_url + race.url)
+    #     time.sleep(3)
+    #     html = driver.page_source
+    #     soup = BeautifulSoup(html, 'lxml')
+    #     labURL = soup.iframe['src']
 
-        driver.set_window_size(1110, 950)
-        driver.get(labURL)
-        time.sleep(10)
-        html = driver.page_source
-        soup = BeautifulSoup(html, 'lxml')    
+    #     driver.set_window_size(1110, 950)
+    #     driver.get(labURL)
+    #     time.sleep(10)
+    #     html = driver.page_source
+    #     soup = BeautifulSoup(html, 'lxml')    
 
-        athleteCount = int(driver.find_element_by_xpath("//p[@class='MuiTypography-root MuiTablePagination-caption MuiTypography-body2 MuiTypography-colorInherit'][2]").text.split()[2])
+    #     athleteCount = int(driver.find_element_by_xpath("//p[@class='MuiTypography-root MuiTablePagination-caption MuiTypography-body2 MuiTypography-colorInherit'][2]").text.split()[2])
 
-        print("Athletes Found {0}".format(str(athleteCount)))
+    #     print("Athletes Found {0}".format(str(athleteCount)))
 
-        # Let's just keep it at one page for now
-        #pageCount = int(driver.find_element_by_xpath("//div[@class='jss369']/button[contains(@class, 'page-number')][last()]").text)
-        pageCount = 2
+    #     # Let's just keep it at one page for now
+    #     #pageCount = int(driver.find_element_by_xpath("//div[@class='jss369']/button[contains(@class, 'page-number')][last()]").text)
+    #     pageCount = 2
 
-        currPage = 1
+    #     currPage = 1
 
-        for i in progressbar(range(pageCount), "Getting Athlete Results: "):
-            html = driver.page_source
-            soup = BeautifulSoup(html, 'lxml')
+    #     for i in progressbar(range(pageCount), "Getting Athlete Results: "):
+    #         html = driver.page_source
+    #         soup = BeautifulSoup(html, 'lxml')
 
-            for tr in soup.find_all('tr', {'class' : 'MuiTableRow-root'}):
-                name = ""
-                country = ""
+    #         for tr in soup.find_all('tr', {'class' : 'MuiTableRow-root'}):
+    #             name = ""
+    #             country = ""
 
-                nameTd = tr.find('td', {'class' : 'column-Contact.FullName'})
-                if nameTd:
-                    name = nameTd.span.text
-                countryTd = tr.find('td', {'class' : 'column-CountryISO2'})
-                if countryTd:
-                    country = countryTd.span.text
+    #             nameTd = tr.find('td', {'class' : 'column-Contact.FullName'})
+    #             if nameTd:
+    #                 name = nameTd.span.text
+    #             countryTd = tr.find('td', {'class' : 'column-CountryISO2'})
+    #             if countryTd:
+    #                 country = countryTd.span.text
 
-                athlete = Athlete(name, country)
-                athletes.append(athlete)
+    #             athlete = Athlete(name, country)
+    #             athletes.append(athlete)
 
-            if currPage != pageCount:
-                nxt = driver.find_element_by_xpath("//button[contains(@class, 'next-page')]")
-                actions = ActionChains(driver)
-                actions.click(nxt).perform()
-                currPage += 1
-                time.sleep(2)        
+    #         if currPage != pageCount:
+    #             nxt = driver.find_element_by_xpath("//button[contains(@class, 'next-page')]")
+    #             actions = ActionChains(driver)
+    #             actions.click(nxt).perform()
+    #             currPage += 1
+    #             time.sleep(2)        
 
     driver.quit()
     return athletes
@@ -170,7 +173,7 @@ def main():
     courses = getCourses(url)
     for c in courses:
         print(c.courseInfo())
-        #raceResults = getRaceResults(c)
+        raceResults = getRaceResults(c)
         #print(raceResults)
 
 if __name__== "__main__":
