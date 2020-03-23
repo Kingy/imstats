@@ -76,7 +76,7 @@ def getCourses(url):
 
     return courses
 
-def getRaceResults(Course):
+def getRaces(Course):
 
     result_url = im_url + Course.url_segment + '-results'
 
@@ -86,7 +86,7 @@ def getRaceResults(Course):
     soup = BeautifulSoup(html, 'lxml')
     races = []
     raceResults = []
-    athletes = []
+    
     for link in soup.find_all('a', {'class' : 'tab-remote'}):
         raceURL = link['href']
         raceDate = link.text
@@ -103,56 +103,60 @@ def getRaceResults(Course):
         race = Race(raceID, raceCourse, raceName, raceDate, raceURL)
         races.append(race)
 
-    # for race in races:
-    #     driver.get(im_url + race.url)
-    #     time.sleep(3)
-    #     html = driver.page_source
-    #     soup = BeautifulSoup(html, 'lxml')
-    #     labURL = soup.iframe['src']
-
-    #     driver.set_window_size(1110, 950)
-    #     driver.get(labURL)
-    #     time.sleep(10)
-    #     html = driver.page_source
-    #     soup = BeautifulSoup(html, 'lxml')    
-
-    #     athleteCount = int(driver.find_element_by_xpath("//p[@class='MuiTypography-root MuiTablePagination-caption MuiTypography-body2 MuiTypography-colorInherit'][2]").text.split()[2])
-
-    #     print("Athletes Found {0}".format(str(athleteCount)))
-
-    #     # Let's just keep it at one page for now
-    #     #pageCount = int(driver.find_element_by_xpath("//div[@class='jss369']/button[contains(@class, 'page-number')][last()]").text)
-    #     pageCount = 2
-
-    #     currPage = 1
-
-    #     for i in progressbar(range(pageCount), "Getting Athlete Results: "):
-    #         html = driver.page_source
-    #         soup = BeautifulSoup(html, 'lxml')
-
-    #         for tr in soup.find_all('tr', {'class' : 'MuiTableRow-root'}):
-    #             name = ""
-    #             country = ""
-
-    #             nameTd = tr.find('td', {'class' : 'column-Contact.FullName'})
-    #             if nameTd:
-    #                 name = nameTd.span.text
-    #             countryTd = tr.find('td', {'class' : 'column-CountryISO2'})
-    #             if countryTd:
-    #                 country = countryTd.span.text
-
-    #             athlete = Athlete(name, country)
-    #             athletes.append(athlete)
-
-    #         if currPage != pageCount:
-    #             nxt = driver.find_element_by_xpath("//button[contains(@class, 'next-page')]")
-    #             actions = ActionChains(driver)
-    #             actions.click(nxt).perform()
-    #             currPage += 1
-    #             time.sleep(2)        
-
     driver.quit()
-    return athletes
+    return races
+
+def getRaceResults(Race):
+
+    results = []
+
+    driver.get(im_url + Race.url)
+    time.sleep(3)
+    html = driver.page_source
+    soup = BeautifulSoup(html, 'lxml')
+    labURL = soup.iframe['src']
+
+    driver.set_window_size(1110, 950)
+    driver.get(labURL)
+    time.sleep(10)
+    html = driver.page_source
+    soup = BeautifulSoup(html, 'lxml')    
+
+    athleteCount = int(driver.find_element_by_xpath("//p[@class='MuiTypography-root MuiTablePagination-caption MuiTypography-body2 MuiTypography-colorInherit'][2]").text.split()[2])
+
+    print("Athletes Found {0}".format(str(athleteCount)))
+
+    # Let's just keep it at one page for now
+    #pageCount = int(driver.find_element_by_xpath("//div[@class='jss369']/button[contains(@class, 'page-number')][last()]").text)
+    pageCount = 2
+
+    currPage = 1
+
+    for i in progressbar(range(pageCount), "Getting Athlete Results: "):
+        html = driver.page_source
+        soup = BeautifulSoup(html, 'lxml')
+
+        for tr in soup.find_all('tr', {'class' : 'MuiTableRow-root'}):
+            name = ""
+            country = ""
+
+            nameTd = tr.find('td', {'class' : 'column-Contact.FullName'})
+            if nameTd:
+                name = nameTd.span.text
+            countryTd = tr.find('td', {'class' : 'column-CountryISO2'})
+            if countryTd:
+                country = countryTd.span.text
+
+            athlete = Athlete(name, country)
+            results.append(athlete)
+        if currPage != pageCount:
+            nxt = driver.find_element_by_xpath("//button[contains(@class, 'next-page')]")
+            actions = ActionChains(driver)
+            actions.click(nxt).perform()
+            currPage += 1
+            time.sleep(2)  
+
+    return results      
 
 def progressbar(it, prefix="", size=60, file=sys.stdout):
     count = len(it)
@@ -173,8 +177,11 @@ def main():
     courses = getCourses(url)
     for c in courses:
         print(c.courseInfo())
-        raceResults = getRaceResults(c)
-        #print(raceResults)
+        races = getRaces(c)
+        for r in races:
+            print(r)
+            raceResults = getRaceResults(r) 
+            print(raceResults)
 
 if __name__== "__main__":
     main()
