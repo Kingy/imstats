@@ -87,9 +87,9 @@ def getRaces(Course):
     races = []
     raceResults = []
     
-    for link in soup.find_all('a', {'class' : 'tab-remote'}):
+    try:
         raceURL = link['href']
-        raceDate = link.text
+        raceDate = link.text[:4]
         raceID = None
         raceName = "N/A"
         raceCourse = Course.id
@@ -102,6 +102,9 @@ def getRaces(Course):
 
         race = Race(raceID, raceCourse, raceName, raceDate, raceURL)
         races.append(race)
+    except Exception:
+        print("Error: " + Exception)
+        pass
 
     driver.quit()
     return races
