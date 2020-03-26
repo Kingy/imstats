@@ -53,7 +53,7 @@ def getCourses(url):
             with Database() as db:
                 checkCourseExists = db.query("SELECT course_id from course where name = %s", (name,))
                 if not checkCourseExists:
-                    db.execute("INSERT INTO course (name) VALUES (%s)", (name,))
+                    db.execute("INSERT INTO course (name, location, url) VALUES (%s, %s, %s)", (name,location, url,))
                     courseID = db.cursor.lastrowid
                 else:
                     courseID = checkCourseExists[0][0]
@@ -185,14 +185,23 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
 
 def main():
     url = im_url + 'races'
+    courses = []
+    races = []
+    athleteResults = []
+
+    # Get all courses
     courses = getCourses(url)
+
+    # Get all races for the courses
     for c in courses:
         print(c.courseInfo())
         races = getRaces(c)
-        for r in races:
-            print(r)
-            raceResults = getRaceResults(r) 
-            print(raceResults)
+        
+    # Get all athlete race results
+    for r in races:
+        print(r)
+        raceResults = getRaceResults(r) 
+        
 
 if __name__== "__main__":
     main()
