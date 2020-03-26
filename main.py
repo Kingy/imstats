@@ -95,10 +95,12 @@ def getRaces(Course):
         raceCourse = Course.id
 
         with Database() as db:
-            checkCourseRaceExists = db.query("SELECT race_id from race where race_date = %s", (raceDate,))
-            if not checkCourseRaceExists:
+            checkRaceExists = db.query("SELECT race_id from race where race_date = %s", (raceDate,))
+            if not checkRaceExists:
                 db.execute("INSERT INTO race (course_id, name, race_date) VALUES (%s, %s, %s)", (raceCourse,'N/A',raceDate,))
                 raceID = db.cursor.lastrowid
+            else:
+                raceID = checkRaceExists[0][0]
 
         race = Race(raceID, raceCourse, raceName, raceDate, raceURL)
         races.append(race)
