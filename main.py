@@ -4,7 +4,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
 from classes.Course import Course
-from classes.Athlete import Athlete
+from classes.AthleteResult import AthleteResult
 from classes.Database import Database
 from classes.Race import Race
 import time, sys
@@ -150,7 +150,15 @@ def getRaceResults(Race):
             if countryTd:
                 country = countryTd.span.text
 
-            athlete = Athlete(name, country)
+            resultID = None
+
+            with Database() as db:
+                checkAthleteResultExists = db.query("SELECT result_id from race_results where race_id = %s AND name = %s AND cty_Code = %s", (Race.id,name,country,))
+                if not checkCourseRaceExists:
+                    db.execute("INSERT INTO race_results (race_id, name, cty_code, part_div_tp, part_gen, part_div_rank, part_gen_rank, part_ovrl_rank, part_tot_time) VALUES (%s, %s, %s, 'N/A', 'N', 0, 0, 0, '00:00:00')", (Race.id,name,country,))
+                    resultID = db.cursor.lastrowid
+
+            athlete = AthleteResult(resultID, Race.id, name, country, 'N/A', 'N', 0, 0, 0, '00:00:00')
             results.append(athlete)
         if currPage != pageCount:
             nxt = driver.find_element_by_xpath("//button[contains(@class, 'next-page')]")
