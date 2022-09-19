@@ -2,6 +2,9 @@ from lxml import html
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 from classes.Course import Course
 from classes.AthleteResult import AthleteResult
@@ -24,12 +27,14 @@ chrome_options.add_argument('--log-level=3')
 def getCourses(url):
     driver = webdriver.Chrome(chrome_driver, options=chrome_options)
     driver.get(url)
+    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//button[@id="onetrust-accept-btn-handler"]'))).click()
     html = driver.page_source
     soup = BeautifulSoup(html, 'lxml')
     courses = []
     driver.execute_script("window.scrollTo(0, window.scrollY + 4400)")
-    pageCount = len(driver.find_elements_by_xpath("//div[@class='pageButtons']/div[contains(@class, 'pageNumber')]"))
-    courseCount = driver.find_element_by_xpath("//div[@class='race-count']/p[1]").text
+    pageCount = len(driver.find_elements(by=By.XPATH, value="//div[@class='pageButtons']/div[contains(@class, 'pageNumber')]"))
+    courseCount = driver.find_element("xpath", "//div[@class='race-count']/p[1]").text
+    print(courseCount)
 
     # Do the first page
     driver.execute_script("window.scrollTo(0, window.scrollY + 0)")
@@ -66,7 +71,7 @@ def getCourses(url):
         if currPage != pageCount:
             driver.execute_script("window.scrollTo(0, window.scrollY + 4400)")
             time.sleep(2)
-            nxt = driver.find_element_by_xpath("//div[@class='paginationButtons']/button[@class='nextPageButton']")
+            nxt = driver.find_element("xpath", "//div[@class='paginationButtons']/button[@class='nextPageButton']")
             actions = ActionChains(driver)
             actions.click(nxt).perform()
             currPage += 1
@@ -82,93 +87,84 @@ def getRaces(Course):
 
     driver = webdriver.Chrome(chrome_driver, options=chrome_options)    
     driver.get(result_url)
+
+    WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.XPATH, '//button[@id="onetrust-accept-btn-handler"]'))).click()
+    WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, '//div[@class="mktoModalClose"]'))).click()
+
+    raceCount = len(driver.find_elements(by=By.XPATH, value="//ul[@class='contentTabs layoutContainerTabs']/li"))
+
+    print(Course.name)
+    print(raceCount)
+
     html = driver.page_source
     soup = BeautifulSoup(html, 'lxml')
-    races = []
-    raceResults = []
     
-    try:
-        raceURL = link['href']
-        raceDate = link.text[:4]
-        raceID = None
-        raceName = "N/A"
-        raceCourse = Course.id
+    races = []
 
-        with Database() as db:
-            checkRaceExists = db.query("SELECT race_id from race where race_date = %s", (raceDate,))
-            if not checkRaceExists:
-                db.execute("INSERT INTO race (course_id, name, race_date) VALUES (%s, %s, %s)", (raceCourse,'N/A',raceDate,))
-                raceID = db.cursor.lastrowid
-            else:
-                raceID = checkRaceExists[0][0]
-
-        race = Race(raceID, raceCourse, raceName, raceDate, raceURL)
-        races.append(race)
-    except Exception:
-        print("Error: " + Exception)
-        pass
-
-    driver.quit()
-    return races
-
-def getRaceResults(Race):
-
-    results = []
-
-    driver.get(im_url + Race.url)
-    time.sleep(3)
-    html = driver.page_source
-    soup = BeautifulSoup(html, 'lxml')
-    labURL = soup.iframe['src']
-
-    driver.set_window_size(1110, 950)
-    driver.get(labURL)
-    time.sleep(10)
-    html = driver.page_source
-    soup = BeautifulSoup(html, 'lxml')    
-
-    athleteCount = int(driver.find_element_by_xpath("//p[@class='MuiTypography-root MuiTablePagination-caption MuiTypography-body2 MuiTypography-colorInherit'][2]").text.split()[2])
-
-    print("Athletes Found {0}".format(str(athleteCount)))
-
-    # Let's just keep it at one page for now
-    #pageCount = int(driver.find_element_by_xpath("//div[@class='jss369']/button[contains(@class, 'page-number')][last()]").text)
-    pageCount = 2
-
-    currPage = 1
-
-    for i in progressbar(range(pageCount), "Getting Athlete Results: "):
-        html = driver.page_source
-        soup = BeautifulSoup(html, 'lxml')
-
-        for tr in soup.find_all('tr', {'class' : 'MuiTableRow-root'}):
-            name = ""
-            country = ""
-
-            nameTd = tr.find('td', {'class' : 'column-Contact.FullName'})
-            if nameTd:
-                name = nameTd.span.text
-            countryTd = tr.find('td', {'class' : 'column-CountryISO2'})
-            if countryTd:
-                country = countryTd.span.text
-
-            resultID = None
+    for racesUl in soup.find_all('ul', {'class': 'contentTabs layoutContainerTabs'}):
+        for raceLi in racesUl.find_all('li'):
+            date = raceLi.span.a.text
 
             with Database() as db:
-                checkAthleteResultExists = db.query("SELECT result_id from race_results where race_id = %s AND name = %s AND cty_Code = %s", (Race.id,name,country,))
-                if not checkCourseRaceExists:
-                    db.execute("INSERT INTO race_results (race_id, name, cty_code, part_div_tp, part_gen, part_div_rank, part_gen_rank, part_ovrl_rank, part_tot_time) VALUES (%s, %s, %s, 'N/A', 'N', 0, 0, 0, '00:00:00')", (Race.id,name,country,))
-                    resultID = db.cursor.lastrowid
+                checkRaceExists = db.query("SELECT race_id from race where name = %s AND course_id = %s", (date, Course.id,))
+                if not checkRaceExists:
+                    db.execute("INSERT INTO race (course_id, name) VALUES (%s, %s)", (Course.id,date,))
+                    raceID = db.cursor.lastrowid
+                else:
+                    raceID = checkRaceExists[0][0]
 
-            athlete = AthleteResult(resultID, Race.id, name, country, 'N/A', 'N', 0, 0, 0, '00:00:00')
-            results.append(athlete)
-        if currPage != pageCount:
-            nxt = driver.find_element_by_xpath("//button[contains(@class, 'next-page')]")
-            actions = ActionChains(driver)
-            actions.click(nxt).perform()
-            currPage += 1
-            time.sleep(2)  
+            race = Race(raceID, Course.name, date)
+            races.append(race)
 
+
+    driver.quit()
+    return races   
+
+
+def getRaceResults(Course, Race):
+    results = []
+    result_url = im_url + Course.url_segment + '-results'
+    
+    #'/layout_container/show_layout_tab?layout_container_id=64187417&page_node_id=5333561&tab_element_id=213209'
+
+    driver = webdriver.Chrome(chrome_driver, options=chrome_options)    
+    driver.get(result_url)
+
+    WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.XPATH, '//button[@id="onetrust-accept-btn-handler"]'))).click()
+    try:
+        WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.XPATH, '//div[@class="mktoModalClose"]'))).click()
+    except:
+        print("No Frame")
+    
+    raceXpath = "//ul[@class='contentTabs layoutContainerTabs']/li/span/a[text() = '" + Race.name.strip() + "']"
+    raceAHref = driver.find_element(by=By.XPATH, value=raceXpath).get_attribute('href')
+    athlete_list_url = raceAHref
+
+    driver.set_window_size(1024, 768)
+    driver.get(athlete_list_url)
+
+    WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.XPATH, '//iframe')));
+
+    iframe = driver.find_element(by=By.XPATH, value="//iframe")
+    driver.switch_to.frame(iframe)
+
+    WebDriverWait(driver, 30).until(EC.visibility_of_element_located((By.ID, 'resultList')));
+
+    html = driver.page_source
+    soup = BeautifulSoup(html, 'lxml')   
+
+    athleteTable = soup.find(id="resultList")
+    for athleteTr in athleteTable.tbody.find_all('tr'):
+        athleteTd = athleteTr.find_all('td')
+        print(athleteTd)
+
+    # for athleteTable in soup.find_all('div', {'id': 'resultList'}):
+    #     print("HELLO")
+    #     for raceTr in athleteTable.find_all('tr'):
+    #         raceTd = raceTr.find_all('td');
+    #         print(raceTd[1].span.text)    
+
+    #driver.quit()
     return results      
 
 def progressbar(it, prefix="", size=60, file=sys.stdout):
@@ -186,23 +182,51 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
     file.flush()
 
 def main():
-    url = im_url + 'races'
+    url = im_url + '/races'
     courses = []
     races = []
     athleteResults = []
 
-    # Get all courses
-    courses = getCourses(url)
+    ######## Get all courses ########
+    #courses = getCourses(url)
 
-    # Get all races for the courses
-    for c in courses:
-        print(c.courseInfo())
-        races = getRaces(c)
+    ######## Get races for one course ########
+    # course = None
+    # with Database() as db:
+    #     course_res = db.query("SELECT * from course LIMIT 1")
+    #     if not course_res:
+    #         print("No Course Found")
+    #         return
+    #     else:
+    #         course = Course(course_res[0][0], course_res[0][1], course_res[0][2], course_res[0][3])
+
+    # course_races = getRaces(course)
+
+    ######### Get all races for the courses #########
+    #for c in courses:
+    #    print(c.courseInfo())
+    #    races = getRaces(c)
+    #print(courses[0].courseInfo())
+    #races = getRaces(courses[0])
+
+    ######## Get results for one race #########
+    race = '2021'
+    with Database() as db:
+        race_res = db.query("SELECT course.*, race.* FROM race inner JOIN course ON course.course_id = race.course_id WHERE race.name = %s", (race,))
+        if not race_res:
+            print("No Race Found")
+            return
+        else:
+            print(race_res)
+            course = Course(race_res[0][0], race_res[0][1], race_res[0][2], race_res[0][3])
+            race = Race(race_res[0][5],race_res[0][6],race_res[0][7])
+
+    raceResults = getRaceResults(course, race)
         
     # Get all athlete race results
-    for r in races:
-        print(r)
-        raceResults = getRaceResults(r) 
+    #for r in races:
+    #    print(r)
+    #    raceResults = getRaceResults(r) 
         
 
 if __name__== "__main__":
