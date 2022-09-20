@@ -20,7 +20,7 @@ im_url = config['Main']['ironman.base_url']
 chrome_driver = config['Main']['chromedriver.location']
 
 chrome_options = webdriver.ChromeOptions()
-#chrome_options.add_argument('--headless')
+chrome_options.add_argument('--headless')
 chrome_options.add_argument('--blink-settings=imagesEnabled=false')
 chrome_options.add_argument('--log-level=3')
 
@@ -153,18 +153,48 @@ def getRaceResults(Course, Race):
     html = driver.page_source
     soup = BeautifulSoup(html, 'lxml')   
 
-    athleteTable = soup.find(id="resultList")
-    for athleteTr in athleteTable.tbody.find_all('tr'):
-        athleteTd = athleteTr.find_all('td')
-        print(athleteTd)
+    pageCount = int(soup.find_all("button", {"class": "page-number"})[-1].span.text)
+    currPage = 1
 
-    # for athleteTable in soup.find_all('div', {'id': 'resultList'}):
-    #     print("HELLO")
-    #     for raceTr in athleteTable.find_all('tr'):
-    #         raceTd = raceTr.find_all('td');
-    #         print(raceTd[1].span.text)    
+    for i in progressbar(range(pageCount), "Getting Athlete Results: "):
 
-    #driver.quit()
+        html = driver.page_source
+        soup = BeautifulSoup(html, 'lxml')   
+
+        athleteTable = soup.find(id="resultList")
+        for athleteTr in athleteTable.tbody.find_all('tr'):
+            name = athleteTr.select("td:nth-child(2)")[0].span.text
+            country = athleteTr.select("td:nth-child(3)")[0].span.text
+            divRank = athleteTr.select("td:nth-child(5)")[0].span.text
+            genderRank = athleteTr.select("td:nth-child(6)")[0].span.text
+            rank = athleteTr.select("td:nth-child(7)")[0].span.text
+            swimTime = athleteTr.select("td:nth-child(8)")[0].span.text
+            bikeTime = athleteTr.select("td:nth-child(9)")[0].span.text
+            runTime = athleteTr.select("td:nth-child(10)")[0].span.text
+            ovrtime = athleteTr.select("td:nth-child(11)")[0].span.text
+            points = athleteTr.select("td:nth-child(12)")[0].span.text
+
+            with Database() as db:
+                checkAthleteResultExists = db.query("SELECT result_id from race_results where athlete_name = %s AND race_id = %s", (name, Race.id))
+                if not checkAthleteResultExists:
+                    db.execute("INSERT INTO race_results (race_id, athlete_name, cty_code, div_rank, gen_rank, rank, swim_time, bike_time, run_time, time, points) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (Race.id, name, country, divRank, genderRank, rank, swimTime, bikeTime, runTime, ovrtime, points,))
+                    athleteResultID = db.cursor.lastrowid
+                else:
+                    athleteResultID = checkAthleteResultExists[0][0]
+
+            athleteResult = AthleteResult(athleteResultID, Race.id, name, country, divRank, genderRank, rank, swimTime, bikeTime, runTime, ovrtime, points)
+            results.append(athleteResult)
+
+
+        if currPage != pageCount:
+            driver.execute_script("window.scrollTo(0, window.scrollY + 4400)")
+            nxt = driver.find_element(by=By.XPATH, value="//button[contains(@class, 'next-page')]")
+            actions = ActionChains(driver)
+            actions.click(nxt).perform()
+            currPage += 1
+            time.sleep(3)            
+
+    driver.quit()
     return results      
 
 def progressbar(it, prefix="", size=60, file=sys.stdout):
@@ -222,6 +252,7 @@ def main():
             race = Race(race_res[0][5],race_res[0][6],race_res[0][7])
 
     raceResults = getRaceResults(course, race)
+    print(raceResults)
         
     # Get all athlete race results
     #for r in races:
