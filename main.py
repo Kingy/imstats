@@ -23,6 +23,10 @@ chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument('--headless')
 chrome_options.add_argument('--blink-settings=imagesEnabled=false')
 chrome_options.add_argument('--log-level=3')
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--window-size=1920x1080")
+chrome_options.add_argument("start-maximised")
 
 def getCourses(url):
     driver = webdriver.Chrome(chrome_driver, options=chrome_options)
@@ -31,7 +35,7 @@ def getCourses(url):
     html = driver.page_source
     soup = BeautifulSoup(html, 'lxml')
     courses = []
-    driver.execute_script("window.scrollTo(0, window.scrollY + 4400)")
+    driver.execute_script("window.scrollTo(0, window.scrollY + 100)")
     pageCount = len(driver.find_elements(by=By.XPATH, value="//div[@class='pageButtons']/div[contains(@class, 'pageNumber')]"))
     courseCount = driver.find_element("xpath", "//div[@class='race-count']/p[1]").text
     print(courseCount)
@@ -52,30 +56,44 @@ def getCourses(url):
             day = courseDiv.find('p', {'class' : 'race-day'}).text
             year = courseDiv.find('p', {'class' : 'race-year'}).text
             date = month + ' ' + day + ' ' + year
+            image = courseDiv.find('div', {'class' : 'race-image'}).img['src']
+            swim = courseDiv.find('div', {'class' : 'swim-type'}).p.b.text
+            bike = courseDiv.find('div', {'class' : 'bike-type'}).p.b.text
+            run = courseDiv.find('div', {'class' : 'run-type'}).p.b.text
+            airTemp = courseDiv.find('div', {'class' : 'airTemp'}).p.b.text
+            waterTemp = courseDiv.find('div', {'class' : 'waterTemp'}).p.b.text
             url = courseDiv.find('div', {'class' : 'race-details-right'}).a['href']
             courseID = None
 
             with Database() as db:
                 checkCourseExists = db.query("SELECT course_id from course where name = %s", (name,))
                 if not checkCourseExists:
-                    db.execute("INSERT INTO course (name, location, url) VALUES (%s, %s, %s)", (name,location, url,))
+                    db.execute("INSERT INTO course (name, location, date, image, swim, bike, run, air_temp, water_temp, url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", (name,location,date,image,swim,bike,run,airTemp,waterTemp,url,))
                     courseID = db.cursor.lastrowid
                 else:
                     courseID = checkCourseExists[0][0]
 
-            course = Course(courseID, name, location, url)
+            course = Course(courseID, name, date, image, swim, bike, run, airTemp, waterTemp, location, url)
             courses.append(course)
 
             # Make and insert the next race for this course here
 
         if currPage != pageCount:
-            driver.execute_script("window.scrollTo(0, window.scrollY + 4400)")
-            time.sleep(2)
+            # driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            # time.sleep(2)
+            # nxt = driver.find_element("xpath", "//div[@class='paginationButtons']/button[@class='nextPageButton']")
+            # actions = ActionChains(driver)
+            # actions.click(nxt).perform()
+            # currPage += 1
+            # time.sleep(2)
             nxt = driver.find_element("xpath", "//div[@class='paginationButtons']/button[@class='nextPageButton']")
+            driver.execute_script("""arguments[0].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });""", nxt)
+            time.sleep(2)
             actions = ActionChains(driver)
             actions.click(nxt).perform()
             currPage += 1
             time.sleep(2)
+
 
     driver.quit()
 
@@ -88,8 +106,11 @@ def getRaces(Course):
     driver = webdriver.Chrome(chrome_driver, options=chrome_options)    
     driver.get(result_url)
 
-    WebDriverWait(driver, 3).until(EC.element_to_be_clickable((By.XPATH, '//button[@id="onetrust-accept-btn-handler"]'))).click()
-    WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, '//div[@class="mktoModalClose"]'))).click()
+    WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.XPATH, '//button[@id="onetrust-accept-btn-handler"]'))).click()
+    try:
+        WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.XPATH, '//div[@class="mktoModalClose"]'))).click()
+    except:
+        print("No Frame")
 
     raceCount = len(driver.find_elements(by=By.XPATH, value="//ul[@class='contentTabs layoutContainerTabs']/li"))
 
@@ -240,19 +261,49 @@ def main():
     #races = getRaces(courses[0])
 
     ######## Get results for one race #########
-    race = '2021'
+    course = input("Course Name: ")    
+
     with Database() as db:
-        race_res = db.query("SELECT course.*, race.* FROM race inner JOIN course ON course.course_id = race.course_id WHERE race.name = %s", (race,))
-        if not race_res:
-            print("No Race Found")
-            return
+        course_res = db.query("SELECT * from course WHERE name = %s", (course,))
+        if not course_res:
+            print("Course Not Found!")
+            option = input("Do you want to refresh all courses? (y/n): ")
+            if (option == 'y'):
+                courses = getCourses(url)
+                found_course = [c for c in courses if c.name == course]
+                if found_course:
+                    course = found_course[0]
+                else: 
+                    print("Course Not Found!")
+                    sys.exit()
+            else:
+                print("Finished.")
+                sys.exit()
         else:
-            print(race_res)
-            course = Course(race_res[0][0], race_res[0][1], race_res[0][2], race_res[0][3])
+            course = Course(course_res[0][0], course_res[0][1], course_res[0][2], course_res[0][3])
+
+    race = input("Race Date: ")
+    with Database() as db:
+        race_res = db.query("SELECT course.*, race.* FROM race inner JOIN course ON course.course_id = race.course_id WHERE race.name = %s AND course.name = %s", (race, course.name))
+        if not race_res:
+            print("Race Not Found!")
+            option = input("Do you want to refresh races for this course? (y/n): ")
+            if (option == 'y'):
+                course_races = getRaces(course)
+                found_race = [r for r in course_races if r.name == race]
+                if found_race:
+                    race = found_race[0]
+                else: 
+                    print("Race Not Found!")
+                    sys.exit()
+            else:
+                sys.exit()
+        else:
             race = Race(race_res[0][5],race_res[0][6],race_res[0][7])
 
+        
     raceResults = getRaceResults(course, race)
-    print(raceResults)
+
         
     # Get all athlete race results
     #for r in races:
